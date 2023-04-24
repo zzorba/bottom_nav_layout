@@ -20,6 +20,7 @@ class BottomNavLayout extends StatefulWidget {
     Key? key,
     required this.pages,
     required this.bottomNavigationBar,
+    this.bottomNavigationFab,
     this.savePageState = false,
     this.lazyLoadPages = false,
     this.pageStack,
@@ -50,6 +51,12 @@ class BottomNavLayout extends StatefulWidget {
   /// Make sure bottom navbar items count is the same as the page count.
   /// Otherwise, you might get a [RangeError].
   final Widget Function(int, Function(int)) bottomNavigationBar;
+
+  /// Floating widgets that should render above the content and the bottom navbar of the layout.
+  ///
+  /// Make sure bottom navbar items count is the same as the page count.
+  /// Otherwise, you might get a [RangeError].
+  final List<Positioned> Function(int, Function(int))? bottomNavigationFab;
 
   /// When false, the pages are reinitialized every time they are navigated to. (Material Design behavior)
   /// When true, the pages are initialized once and hidden/shown on navigation. (Cupertino behavior)
@@ -191,27 +198,34 @@ class _BottomNavLayoutState extends State<BottomNavLayout> {
     // Return the view
     return WillPopScope(
       onWillPop: onWillPop,
-      child: Scaffold(
-        extendBody: widget.extendBody,
-        resizeToAvoidBottomInset: widget.resizeToAvoidBottomInset,
-        body: widget.pageTransitionData == null
-            ? IndexedStack(
-                key: ValueKey<int>(widget.savePageState ? 0 : currentIndex),
-                index: currentIndex,
-                // If the page is not initialized, "not show" an invisible widget instead.
-                children:
-                    pages.map((page) => page ?? SizedBox.shrink()).toList(),
-              )
-            : TwoWayAnimatedIndexedStack(
-                key: ValueKey<int>(widget.savePageState ? 0 : currentIndex),
-                animData: widget.pageTransitionData!,
-                index: currentIndex,
-                // If the page is not initialized, "not show" an invisible widget instead.
-                children:
-                    pages.map((page) => page ?? SizedBox.shrink()).toList(),
-              ),
-        bottomNavigationBar:
-            widget.bottomNavigationBar(currentIndex, onPageSelected),
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          Scaffold(
+            extendBody: widget.extendBody,
+            resizeToAvoidBottomInset: widget.resizeToAvoidBottomInset,
+            body: widget.pageTransitionData == null
+                ? IndexedStack(
+                    key: ValueKey<int>(widget.savePageState ? 0 : currentIndex),
+                    index: currentIndex,
+                    // If the page is not initialized, "not show" an invisible widget instead.
+                    children:
+                        pages.map((page) => page ?? SizedBox.shrink()).toList(),
+                  )
+                : TwoWayAnimatedIndexedStack(
+                    key: ValueKey<int>(widget.savePageState ? 0 : currentIndex),
+                    animData: widget.pageTransitionData!,
+                    index: currentIndex,
+                    // If the page is not initialized, "not show" an invisible widget instead.
+                    children:
+                        pages.map((page) => page ?? SizedBox.shrink()).toList(),
+                  ),
+            bottomNavigationBar:
+                widget.bottomNavigationBar(currentIndex, onPageSelected),
+          ),
+          if (widget.bottomNavigationFab != null)
+            ...widget.bottomNavigationFab!.call(currentIndex, onPageSelected),
+        ],
       ),
     );
   }
